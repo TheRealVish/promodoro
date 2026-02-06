@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pomodoro Timer</title>
+  </head>
+  <body>
+    <div id="app">
+      <div class="container">
+        <h1 class="title">Pomodoro Timer</h1>
+
+        <div class="mode-tabs">
+          <button class="mode-tab active" data-mode="work">Work</button>
+          <button class="mode-tab" data-mode="shortBreak">Short Break</button>
+          <button class="mode-tab" data-mode="longBreak">Long Break</button>
+        </div>
+
+        <div class="timer-wrapper">
+          <svg class="progress-ring" viewBox="0 0 220 220">
+            <circle
+              class="progress-ring__bg"
+              cx="110"
+              cy="110"
+              r="100"
+              fill="none"
+              stroke-width="8"
+            />
+            <circle
+              class="progress-ring__circle"
+              cx="110"
+              cy="110"
+              r="100"
+              fill="none"
+              stroke-width="8"
+              stroke-linecap="round"
+              transform="rotate(-90 110 110)"
+            />
+          </svg>
+          <div class="timer-display" id="timer-display">25:00</div>
+        </div>
+
+        <div class="controls">
+          <button class="btn btn-primary" id="btn-start">Start</button>
+          <button class="btn btn-primary hidden" id="btn-pause">Pause</button>
+          <button class="btn btn-secondary" id="btn-reset">Reset</button>
+          <button class="btn btn-secondary" id="btn-skip">Skip</button>
+        </div>
+
+        <div class="pomodoro-dots" id="pomodoro-dots">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+
+        <div class="session-count">
+          Sessions completed: <span id="session-count">0</span>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

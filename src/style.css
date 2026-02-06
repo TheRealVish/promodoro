@@ -1,0 +1,220 @@
+:root {
+  --bg-work: #ba4949;
+  --bg-short-break: #38858a;
+  --bg-long-break: #397097;
+  --fg: #ffffff;
+  --fg-muted: rgba(255, 255, 255, 0.6);
+  --btn-bg: rgba(255, 255, 255, 0.2);
+  --btn-hover: rgba(255, 255, 255, 0.3);
+  --ring-bg: rgba(255, 255, 255, 0.2);
+  --ring-fg: #ffffff;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-work);
+  color: var(--fg);
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.6s ease;
+}
+
+body.mode-work {
+  background-color: var(--bg-work);
+}
+
+body.mode-shortBreak {
+  background-color: var(--bg-short-break);
+}
+
+body.mode-longBreak {
+  background-color: var(--bg-long-break);
+}
+
+.container {
+  text-align: center;
+  padding: 2rem;
+  max-width: 480px;
+  width: 100%;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  opacity: 0.9;
+}
+
+/* Mode Tabs */
+.mode-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.mode-tab {
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+
+.mode-tab:hover {
+  opacity: 1;
+  background: var(--btn-bg);
+}
+
+.mode-tab.active {
+  opacity: 1;
+  background: var(--btn-bg);
+  font-weight: 600;
+}
+
+/* Timer */
+.timer-wrapper {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 2rem;
+}
+
+.progress-ring {
+  width: 100%;
+  height: 100%;
+}
+
+.progress-ring__bg {
+  stroke: var(--ring-bg);
+}
+
+.progress-ring__circle {
+  stroke: var(--ring-fg);
+  stroke-dasharray: 628.318;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.3s ease;
+}
+
+.timer-display {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s, background-color 0.2s;
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn-primary {
+  background: var(--fg);
+  color: var(--bg-work);
+}
+
+body.mode-shortBreak .btn-primary {
+  color: var(--bg-short-break);
+}
+
+body.mode-longBreak .btn-primary {
+  color: var(--bg-long-break);
+}
+
+.btn-secondary {
+  background: var(--btn-bg);
+  color: var(--fg);
+}
+
+.btn-secondary:hover {
+  background: var(--btn-hover);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Pomodoro Dots */
+.pomodoro-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--fg);
+  opacity: 0.5;
+  transition: opacity 0.3s, background-color 0.3s;
+}
+
+.dot.filled {
+  background: var(--fg);
+  opacity: 1;
+}
+
+/* Session Count */
+.session-count {
+  font-size: 0.85rem;
+  color: var(--fg-muted);
+}
+
+#session-count {
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .container {
+    padding: 1.5rem 1rem;
+  }
+
+  .timer-display {
+    font-size: 2.75rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.25rem;
+    font-size: 0.9rem;
+  }
+}
