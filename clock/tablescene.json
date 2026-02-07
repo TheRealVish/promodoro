@@ -1,0 +1,337 @@
+{
+"schemaVersion": "1.0",
+"purpose": "Approximate 3D scene reconstruction from a single photo for three.js. Absolute dimensions cannot be perfectly recovered from one image; values below are best-effort, human-plausible estimates with per-object uncertainty.",
+"units": "m",
+"coordinateSystem": {
+"axis": {
+"x": "right (along back wall / window wall)",
+"y": "up",
+"z": "forward (out into the room from the wall corner)"
+},
+"origin": "Inner floor corner where the left wall (bookshelf wall) meets the back wall (window wall). (0,0,0) is on the floor."
+},
+"globalAssumptions": {
+"ceilingHeight": { "value": 2.6, "uncertainty": 0.15 },
+"deskHeight": { "value": 0.75, "uncertainty": 0.03 },
+"typicalBookHeight": { "value": 0.20, "uncertainty": 0.03 },
+"typicalBookThickness": { "value": 0.025, "uncertainty": 0.01 },
+"note": "If you can provide ONE known measurement (e.g., desk length or window width), you can scale all positions/dimensions linearly."
+},
+"room": {
+"surfaces": [
+{
+"id": "floor",
+"type": "plane",
+"size": { "x": 3.2, "z": 2.4 },
+"position": { "x": 1.6, "y": 0.0, "z": 1.2 },
+"rotation": { "x": -1.57079632679, "y": 0.0, "z": 0.0 },
+"material": { "name": "floor_light", "color": "#d9d6cf", "roughness": 0.9 }
+},
+{
+"id": "backWall_windowWall",
+"type": "plane",
+"size": { "x": 3.2, "y": 2.6 },
+"position": { "x": 1.6, "y": 1.3, "z": 0.0 },
+"rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+"material": { "name": "wall_offwhite", "color": "#f3f0e8", "roughness": 0.95 }
+},
+{
+"id": "leftWall_bookshelfWall",
+"type": "plane",
+"size": { "z": 2.4, "y": 2.6 },
+"position": { "x": 0.0, "y": 1.3, "z": 1.2 },
+"rotation": { "x": 0.0, "y": 1.57079632679, "z": 0.0 },
+"material": { "name": "wall_offwhite_2", "color": "#f3f0e8", "roughness": 0.95 }
+}
+]
+},
+"openings": [
+{
+"id": "window_opening",
+"type": "rectOpening",
+"hostSurfaceId": "backWall_windowWall",
+"size": { "x": 1.65, "y": 1.55 },
+"position": { "x": 2.05, "y": 1.55, "z": 0.0 },
+"frame": {
+"thickness": 0.08,
+"depth": 0.10,
+"material": { "name": "window_frame_grey", "color": "#7b7f86", "roughness": 0.6, "metalness": 0.2 }
+},
+"glass": {
+"material": { "name": "glass", "color": "#ffffff", "opacity": 0.08, "transparent": true, "roughness": 0.05 }
+},
+"sill": {
+"type": "box",
+"size": { "x": 1.75, "y": 0.04, "z": 0.18 },
+"position": { "x": 2.05, "y": 0.82, "z": 0.09 },
+"material": { "name": "sill_offwhite", "color": "#efece4", "roughness": 0.9 }
+},
+"uncertainty": 0.12
+}
+],
+"furniture": [
+{
+"id": "desk_main",
+"type": "box",
+"name": "Wood desk (single slab look)",
+"size": { "x": 2.25, "y": 0.06, "z": 0.72 },
+"position": { "x": 1.35, "y": 0.75, "z": 0.55 },
+"rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+"material": { "name": "wood_warm", "color": "#7a4a2a", "roughness": 0.65 },
+"notes": "Desk sits near the corner, extends under the window. Front edge is closer to the camera; back edge near wall/window.",
+"uncertainty": 0.10
+},
+{
+"id": "desk_support_suggestion",
+"type": "group",
+"name": "Optional simplified supports (not visible clearly in photo)",
+"children": [
+{
+"id": "desk_leg_left",
+"type": "box",
+"size": { "x": 0.05, "y": 0.72, "z": 0.05 },
+"position": { "x": 0.35, "y": 0.36, "z": 0.90 },
+"rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+"material": { "name": "wood_warm", "color": "#6e4024", "roughness": 0.7 },
+"uncertainty": 0.25
+},
+{
+"id": "desk_leg_right",
+"type": "box",
+"size": { "x": 0.05, "y": 0.72, "z": 0.05 },
+"position": { "x": 2.25, "y": 0.36, "z": 0.85 },
+"rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+"material": { "name": "wood_warm", "color": "#6e4024", "roughness": 0.7 },
+"uncertainty": 0.25
+}
+]
+},
+{
+"id": "bookshelf_wall_unit",
+"type": "box",
+"name": "Full-height bookshelf on left wall",
+"size": { "x": 0.28, "y": 2.45, "z": 2.05 },
+"position": { "x": 0.14, "y": 1.225, "z": 1.05 },
+"rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+"material": { "name": "shelf_wood_light", "color": "#b07a4a", "roughness": 0.7 },
+"notes": "Books fill shelves; shelf structure simplified as one block for collision/placement. You can replace with shelf modules if needed.",
+"uncertainty": 0.12
+},
+{
+"id": "chair",
+"type": "box",
+"name": "Upholstered armchair (light blue/grey)",
+"size": { "x": 0.70, "y": 0.90, "z": 0.75 },
+"position": { "x": 0.55, "y": 0.45, "z": 1.35 },
+"rotation": { "x": 0.0, "y": -0.15, "z": 0.0 },
+"material": { "name": "fabric_bluegrey", "color": "#7f9aa5", "roughness": 0.95 },
+"notes": "Chair faces the desk; slight angle suggested by photo.",
+"uncertainty": 0.18
+},
+{
+"id": "chair_cushion",
+"type": "box",
+"name": "Dark cushion on chair",
+"size": { "x": 0.52, "y": 0.10, "z": 0.45 },
+"position": { "x": 0.52, "y": 0.52, "z": 1.33 },
+"rotation": { "x": 0.0, "y": -0.15, "z": 0.0 },
+"material": { "name": "fabric_dark", "color": "#2f3a3f", "roughness": 0.98 },
+"uncertainty": 0.22
+}
+],
+"deskTopObjects": [
+{
+"id": "framed_art_left",
+"type": "box",
+"name": "Framed picture leaning near left side (horse drawing)",
+"size": { "x": 0.42, "y": 0.30, "z": 0.03 },
+"position": { "x": 0.45, "y": 0.88, "z": 0.22 },
+"rotation": { "x": 0.20, "y": 0.85, "z": 0.0 },
+"material": { "name": "frame_light", "color": "#d7cfbf", "roughness": 0.75 },
+"uncertainty": 0.25
+},
+{
+"id": "small_items_cluster_left",
+"type": "group",
+"name": "Small desk items near left back corner (cups, stationery, small decor)",
+"position": { "x": 0.65, "y": 0.78, "z": 0.18 },
+"children": [
+{
+"id": "pen_cup_1",
+"type": "cylinder",
+"radius": 0.045,
+"height": 0.10,
+"position": { "x": 0.62, "y": 0.83, "z": 0.16 },
+"rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+"material": { "name": "ceramic_dark", "color": "#4a3f34", "roughness": 0.9 },
+"uncertainty": 0.35
+},
+{
+"id": "small_box_1",
+"type": "box",
+"size": { "x": 0.10, "y": 0.06, "z": 0.10 },
+"position": { "x": 0.72, "y": 0.81, "z": 0.22 },
+"rotation": { "x": 0.0, "y": 0.4, "z": 0.0 },
+"material": { "name": "wood_dark", "color": "#5b3a25", "roughness": 0.8 },
+"uncertainty": 0.35
+},
+{
+"id": "small_vase_or_jar",
+"type": "sphere",
+"radius": 0.04,
+"position": { "x": 0.82, "y": 0.82, "z": 0.14 },
+"rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+"material": { "name": "stone_grey", "color": "#8a8d8f", "roughness": 0.95 },
+"uncertainty": 0.40
+}
+],
+"uncertainty": 0.35
+},
+{
+"id": "window_sill_statues",
+"type": "group",
+"name": "Decor objects on the window sill (center-left)",
+"position": { "x": 1.65, "y": 0.86, "z": 0.10 },
+"children": [
+{
+"id": "sill_figurine_pair",
+"type": "box",
+"size": { "x": 0.10, "y": 0.18, "z": 0.07 },
+"position": { "x": 1.55, "y": 0.91, "z": 0.10 },
+"rotation": { "x": 0.0, "y": 0.2, "z": 0.0 },
+"material": { "name": "bronze_like", "color": "#6a4d2c", "roughness": 0.6, "metalness": 0.2 },
+"uncertainty": 0.35
+},
+{
+"id": "sill_small_object_1",
+"type": "sphere",
+"radius": 0.03,
+"position": { "x": 1.45, "y": 0.85, "z": 0.06 },
+"rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+"material": { "name": "stone_light", "color": "#c7c3bb", "roughness": 0.95 },
+"uncertainty": 0.45
+}
+],
+"uncertainty": 0.35
+},
+{
+"id": "books_row_on_desk_right",
+"type": "instancedBoxes",
+"name": "Row of standing books along right back edge of desk",
+"instanceCount": 22,
+"templateSize": { "x": 0.025, "y": 0.21, "z": 0.16 },
+"startTransform": {
+"position": { "x": 1.65, "y": 0.885, "z": 0.16 },
+"rotation": { "x": 0.0, "y": 0.0, "z": 0.0 }
+},
+"layout": {
+"direction": "x+",
+"spacing": 0.026,
+"jitter": { "position": { "x": 0.004, "y": 0.003, "z": 0.003 }, "rotationY": 0.06, "scale": 0.06 }
+},
+"material": {
+"name": "book_spines_varied",
+"baseColor": "#d9d2c6",
+"roughness": 0.9,
+"note": "Assign per-instance colors/textures if you want varied spines."
+},
+"uncertainty": 0.20
+},
+{
+"id": "sill_animal_figures_line",
+"type": "instancedBoxes",
+"name": "Small animal figurines lined up on sill (right of center)",
+"instanceCount": 9,
+"templateSize": { "x": 0.05, "y": 0.06, "z": 0.02 },
+"startTransform": {
+"position": { "x": 2.05, "y": 0.86, "z": 0.13 },
+"rotation": { "x": 0.0, "y": 0.0, "z": 0.0 }
+},
+"layout": {
+"direction": "x+",
+"spacing": 0.075,
+"jitter": { "position": { "x": 0.006, "y": 0.002, "z": 0.004 }, "rotationY": 0.25, "scale": 0.15 }
+},
+"material": { "name": "figurine_dark", "color": "#3a2f27", "roughness": 0.8 },
+"uncertainty": 0.35
+},
+{
+"id": "tall_figurine_right",
+"type": "box",
+"name": "Tall standing figurine on far right sill",
+"size": { "x": 0.06, "y": 0.28, "z": 0.06 },
+"position": { "x": 2.80, "y": 0.96, "z": 0.12 },
+"rotation": { "x": 0.0, "y": -0.25, "z": 0.0 },
+"material": { "name": "figurine_very_dark", "color": "#1f1a16", "roughness": 0.7 },
+"uncertainty": 0.35
+},
+{
+"id": "desk_lamp_right",
+"type": "group",
+"name": "Desk lamp (partially visible at right edge)",
+"position": { "x": 2.92, "y": 0.78, "z": 0.40 },
+"children": [
+{
+"id": "lamp_shade",
+"type": "cone",
+"radius": 0.16,
+"height": 0.18,
+"position": { "x": 2.90, "y": 0.92, "z": 0.38 },
+"rotation": { "x": 1.10, "y": 0.20, "z": 0.0 },
+"material": { "name": "lamp_shade", "color": "#a9a19a", "roughness": 0.95 },
+"uncertainty": 0.45
+},
+{
+"id": "lamp_arm",
+"type": "cylinder",
+"radius": 0.012,
+"height": 0.35,
+"position": { "x": 2.86, "y": 0.78, "z": 0.44 },
+"rotation": { "x": 0.7, "y": 0.0, "z": 0.0 },
+"material": { "name": "metal_dark", "color": "#3a3a3a", "roughness": 0.4, "metalness": 0.6 },
+"uncertainty": 0.55
+}
+],
+"uncertainty": 0.50
+}
+],
+"lighting": [
+{
+"id": "sunlight_directional",
+"type": "directionalLight",
+"intensity": 2.2,
+"color": "#ffffff",
+"position": { "x": 3.2, "y": 2.3, "z": -1.0 },
+"target": { "x": 1.4, "y": 0.8, "z": 0.9 },
+"castShadow": true,
+"shadow": { "mapSize": 2048, "bias": -0.0002 },
+"notes": "Simulates sunlight entering through the window and casting leaf shadows."
+},
+{
+"id": "ambient_bounce",
+"type": "ambientLight",
+"intensity": 0.35,
+"color": "#ffffff"
+}
+],
+"cameraSuggestion": {
+"type": "perspectiveCamera",
+"fov": 50,
+"position": { "x": 1.35, "y": 1.35, "z": 2.25 },
+"lookAt": { "x": 1.55, "y": 0.95, "z": 0.55 },
+"notes": "Approximate framing similar to the photo. Adjust after you render."
+},
+"accuracyNotes": {
+"whatIsReliable": [
+"Object identities, relative placement (bookshelf left, window back, desk under window, chair in foreground).",
+"Heights close to known furniture norms (desk ~0.75m, chair seat ~0.45m)."
+],
+"whatIsNotFullyRecoverableFromOnePhoto": [
+"Exact room dimensions, exact window width/height, exact desk leg structure, exact count and shape of small objects."
+],
+"howToMakeItTrulyAccurate": [
+"Provide any single real measurement (e.g., desk length). I can rescale the entire JSON precisely.",
+"Provide 1–2 extra photos from different angles to solve depth/scale more accurately."
+]
+}
+}

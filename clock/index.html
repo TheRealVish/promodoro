@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Table Scene</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #1a1a1a; }
+    canvas { display: block; }
+  </style>
+  <script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+  }
+}
+  </script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#1a1a1a');
+
+const data = await fetch('tablescene.json').then(r => r.json());
+
+// --- Camera --- face table parallel (looking along -z toward back wall)
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.05, 50);
+camera.position.set(1.35, 1.1, 1.85);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(1.35, 0.8, 0.55);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.update();
+
+// --- Helpers ---
+function makeMat(m) {
+  const opts = { color: m.color || '#cccccc', roughness: m.roughness ?? 0.8, metalness: m.metalness ?? 0.0 };
+  if (m.transparent) { opts.transparent = true; opts.opacity = m.opacity ?? 0.5; }
+  return new THREE.MeshStandardMaterial(opts);
+}
+
+function applyTransform(mesh, obj) {
+  if (obj.position) mesh.position.set(obj.position.x, obj.position.y, obj.position.z);
+  if (obj.rotation) mesh.rotation.set(obj.rotation.x, obj.rotation.y, obj.rotation.z);
+}
+
+function enableShadow(mesh, cast = true, receive = false) {
+  mesh.castShadow = cast;
+  mesh.receiveShadow = receive;
+}
+
+function makeBrickTexture(colors, mortar, w = 512, h = 512) {
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = mortar;
+  ctx.fillRect(0, 0, w, h);
+
+  const brickW = 64, brickH = 28, gap = 4;
+  const rows = Math.ceil(h / (brickH + gap));
+  const cols = Math.ceil(w / (brickW + gap)) + 1;
+
+  for (let row = 0; row < rows; row++) {
+    const offset = (row % 2 === 1) ? (brickW + gap) / 2 : 0;
+    for (let col = -1; col < cols; col++) {
+      const x = col * (brickW + gap) + offset;
+      const y = row * (brickH + gap);
+      const base = colors[Math.floor(Math.random() * colors.length)];
+      ctx.fillStyle = base;
+      ctx.fillRect(x, y, brickW, brickH);
+      ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.15})`;
+      ctx.fillRect(x, y, brickW, brickH);
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+const redBrickColors = ['#8B4513', '#A0522D', '#7A3B1E', '#6B3A2A', '#944B2D', '#B5573A', '#9E5A3C', '#7E4426'];
+const whiteBrickColors = ['#f0ede8', '#e8e4dd', '#ebe7e1', '#f5f2ed', '#ddd9d3', '#e3dfda', '#f2efea', '#e0dcd6'];
+
+function makeBrickMaterial(repeatX, repeatY, white = false) {
+  const colors = white ? whiteBrickColors : redBrickColors;
+  const mortar = white ? '#ccc8c0' : '#b0a899';
+  const tex = makeBrickTexture(colors, mortar);
+  tex.repeat.set(repeatX, repeatY);
+  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 });
+}
+
+function makeWoodFloorTexture(w = 512, h = 512) {
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#3E2415';
+  ctx.fillRect(0, 0, w, h);
+
+  const plankH = 64, gap = 2;
+  const plankColors = ['#4A2E1A', '#3E2415', '#352010', '#5A3620', '#2E1A0E', '#4E3218', '#3A2212'];
+  const rows = Math.ceil(h / (plankH + gap));
+
+  for (let row = 0; row < rows; row++) {
+    const y = row * (plankH + gap);
+    // Each row has a few planks of varying width
+    let x = -(Math.random() * 100); // stagger offset
+    while (x < w) {
+      const plankW = 120 + Math.random() * 180;
+      const color = plankColors[Math.floor(Math.random() * plankColors.length)];
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, plankW - gap, plankH);
+
+      // Wood grain lines
+      ctx.strokeStyle = `rgba(0,0,0,${0.05 + Math.random() * 0.08})`;
+      ctx.lineWidth = 0.5;
+      for (let g = 0; g < 8; g++) {
+        const gy = y + 4 + Math.random() * (plankH - 8);
+        ctx.beginPath();
+        ctx.moveTo(x, gy);
+        ctx.bezierCurveTo(x + plankW * 0.3, gy + (Math.random() - 0.5) * 3,
+                          x + plankW * 0.7, gy + (Math.random() - 0.5) * 3,
+                          x + plankW, gy);
+        ctx.stroke();
+      }
+
+      // Subtle brightness variation
+      ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.06})`;
+      ctx.fillRect(x, y, plankW - gap, plankH);
+
+      x += plankW;
+    }
+
+    // Gap between rows
+    ctx.fillStyle = '#1A0E05';
+    ctx.fillRect(0, y + plankH, w, gap);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+function makeWoodFloorMaterial(repeatX, repeatY) {
+  const tex = makeWoodFloorTexture();
+  tex.repeat.set(repeatX, repeatY);
+  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75 });
+}
+
+// --- Room surfaces ---
+for (const s of data.room.surfaces) {
+  const sx = s.size.x || s.size.z || 1;
+  const sy = s.size.y || s.size.z || 1;
+  const geo = new THREE.PlaneGeometry(sx, sy);
+  const isWall = s.id.includes('Wall') || s.id.includes('wall');
+  const isFloor = s.id === 'floor';
+  const mat = isWall ? makeBrickMaterial(sx / 0.8, sy / 0.8, false)
+             : isFloor ? makeWoodFloorMaterial(sx / 0.6, sy / 0.6)
+             : makeMat(s.material);
+  const mesh = new THREE.Mesh(geo, mat);
+  applyTransform(mesh, s);
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+}
+
+// --- Extra walls: right wall, front wall, ceiling ---
+const roomW = 3.2, roomD = 2.4, roomH = 2.6;
+
+// Right wall (x = roomW, facing -x)
+const rightWallGeo = new THREE.PlaneGeometry(roomD, roomH);
+const rightWallMesh = new THREE.Mesh(rightWallGeo, makeBrickMaterial(roomD / 0.8, roomH / 0.8, false));
+rightWallMesh.position.set(roomW, roomH / 2, roomD / 2);
+rightWallMesh.rotation.set(0, -Math.PI / 2, 0);
+rightWallMesh.receiveShadow = true;
+scene.add(rightWallMesh);
+
+// Front wall (z = roomD, facing -z)
+const frontWallGeo = new THREE.PlaneGeometry(roomW, roomH);
+const frontWallMesh = new THREE.Mesh(frontWallGeo, makeBrickMaterial(roomW / 0.8, roomH / 0.8, false));
+frontWallMesh.position.set(roomW / 2, roomH / 2, roomD);
+frontWallMesh.rotation.set(0, Math.PI, 0);
+frontWallMesh.receiveShadow = true;
+scene.add(frontWallMesh);
+
+// Ceiling
+const ceilGeo = new THREE.PlaneGeometry(roomW, roomD);
+const ceilMat = new THREE.MeshStandardMaterial({ color: '#f5f2ec', roughness: 0.95 });
+const ceilMesh = new THREE.Mesh(ceilGeo, ceilMat);
+ceilMesh.position.set(roomW / 2, roomH, roomD / 2);
+ceilMesh.rotation.set(Math.PI / 2, 0, 0);
+ceilMesh.receiveShadow = true;
+scene.add(ceilMesh);
+
+// --- Window removed ---
+
+// --- Furniture ---
+function buildBox(obj) {
+  const geo = new THREE.BoxGeometry(obj.size.x, obj.size.y, obj.size.z);
+  const mesh = new THREE.Mesh(geo, makeMat(obj.material));
+  applyTransform(mesh, obj);
+  enableShadow(mesh, true, true);
+  scene.add(mesh);
+}
+
+function buildItem(obj) {
+  let mesh;
+  if (obj.type === 'box') {
+    mesh = new THREE.Mesh(new THREE.BoxGeometry(obj.size.x, obj.size.y, obj.size.z), makeMat(obj.material));
+  } else if (obj.type === 'cylinder') {
+    mesh = new THREE.Mesh(new THREE.CylinderGeometry(obj.radius, obj.radius, obj.height, 16), makeMat(obj.material));
+  } else if (obj.type === 'sphere') {
+    mesh = new THREE.Mesh(new THREE.SphereGeometry(obj.radius, 16, 16), makeMat(obj.material));
+  } else if (obj.type === 'cone') {
+    mesh = new THREE.Mesh(new THREE.ConeGeometry(obj.radius, obj.height, 16), makeMat(obj.material));
+  } else if (obj.type === 'group') {
+    for (const child of (obj.children || [])) buildItem(child);
+    return;
+  } else {
+    return;
+  }
+  applyTransform(mesh, obj);
+  enableShadow(mesh);
+  scene.add(mesh);
+}
+
+// Skip all original desk/furniture — we build a Victorian table instead
+for (const f of data.furniture) {
+  if (f.id === 'bookshelf_wall_unit' || f.id === 'chair' || f.id === 'chair_cushion') continue;
+  if (f.id === 'desk_main' || f.id === 'desk_support_suggestion') continue;
+  if (f.type === 'box') {
+    buildBox(f);
+  } else if (f.type === 'group') {
+    for (const child of (f.children || [])) buildItem(child);
+  }
+}
+
+// --- Victorian Table ---
+const vicWood = new THREE.MeshStandardMaterial({ color: '#3B1F0B', roughness: 0.55, metalness: 0.05 });
+const vicWoodLight = new THREE.MeshStandardMaterial({ color: '#4E2B12', roughness: 0.5, metalness: 0.05 });
+const vicGold = new THREE.MeshStandardMaterial({ color: '#8B7332', roughness: 0.4, metalness: 0.4 });
+
+const tblX = 1.35, tblY = 0.75, tblZ = 0.55;
+const tblW = 2.25, tblD = 0.72, tblThick = 0.05;
+
+// Table top with beveled edge (slightly wider lip)
+const topGeo = new THREE.BoxGeometry(tblW, tblThick, tblD);
+const tableTop = new THREE.Mesh(topGeo, vicWood);
+tableTop.position.set(tblX, tblY, tblZ);
+tableTop.castShadow = true; tableTop.receiveShadow = true;
+scene.add(tableTop);
+
+// Edge trim / apron under the top
+const apronFront = new THREE.Mesh(new THREE.BoxGeometry(tblW - 0.10, 0.08, 0.02), vicWoodLight);
+apronFront.position.set(tblX, tblY - 0.065, tblZ + tblD / 2 - 0.06);
+apronFront.castShadow = true;
+scene.add(apronFront);
+
+const apronBack = new THREE.Mesh(new THREE.BoxGeometry(tblW - 0.10, 0.08, 0.02), vicWoodLight);
+apronBack.position.set(tblX, tblY - 0.065, tblZ - tblD / 2 + 0.06);
+apronBack.castShadow = true;
+scene.add(apronBack);
+
+const apronLeft = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.08, tblD - 0.12), vicWoodLight);
+apronLeft.position.set(tblX - tblW / 2 + 0.06, tblY - 0.065, tblZ);
+apronLeft.castShadow = true;
+scene.add(apronLeft);
+
+const apronRight = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.08, tblD - 0.12), vicWoodLight);
+apronRight.position.set(tblX + tblW / 2 - 0.06, tblY - 0.065, tblZ);
+apronRight.castShadow = true;
+scene.add(apronRight);
+
+// Gold trim strip along front apron
+const goldTrim = new THREE.Mesh(new THREE.BoxGeometry(tblW - 0.14, 0.01, 0.005), vicGold);
+goldTrim.position.set(tblX, tblY - 0.04, tblZ + tblD / 2 - 0.048);
+scene.add(goldTrim);
+
+// Turned legs (stacked cylinders for lathe look)
+function addVictorianLeg(lx, lz) {
+  const legH = tblY - tblThick / 2 - 0.08;
+  const legY = legH / 2;
+
+  // Main shaft
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, legH, 10), vicWood);
+  shaft.position.set(lx, legY, lz);
+  shaft.castShadow = true;
+  scene.add(shaft);
+
+  // Turned bulges (3 along the leg)
+  for (let i = 0; i < 3; i++) {
+    const by = legH * 0.2 + i * legH * 0.3;
+    const bulge = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), vicWood);
+    bulge.position.set(lx, by, lz);
+    bulge.scale.set(1, 1.4, 1);
+    bulge.castShadow = true;
+    scene.add(bulge);
+  }
+
+  // Foot — small flared base
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.03, 0.03, 10), vicWoodLight);
+  foot.position.set(lx, 0.015, lz);
+  foot.castShadow = true;
+  scene.add(foot);
+
+  // Gold ring at top of leg
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.005, 8, 16), vicGold);
+  ring.position.set(lx, legH - 0.01, lz);
+  ring.rotation.set(Math.PI / 2, 0, 0);
+  scene.add(ring);
+}
+
+const legInset = 0.08;
+addVictorianLeg(tblX - tblW / 2 + legInset, tblZ - tblD / 2 + legInset);
+addVictorianLeg(tblX - tblW / 2 + legInset, tblZ + tblD / 2 - legInset);
+addVictorianLeg(tblX + tblW / 2 - legInset, tblZ - tblD / 2 + legInset);
+addVictorianLeg(tblX + tblW / 2 - legInset, tblZ + tblD / 2 - legInset);
+
+// --- Desk-top objects ---
+// Earth-tone book colors
+const bookColors = [
+  '#8B4513', '#A0522D', '#6B4226', '#D2B48C', '#C4A882',
+  '#5C4033', '#7B3F00', '#8D6E63', '#A1887F', '#BCAAA4',
+  '#4E342E', '#3E2723', '#795548', '#6D4C41', '#D7CCC8',
+  '#BF8040', '#CC9966', '#996633', '#AA7744', '#887766',
+  '#556B2F', '#2F4F4F'
+];
+
+for (const obj of data.deskTopObjects) {
+  if (obj.id === 'desk_lamp_right') continue;
+  if (obj.id === 'framed_art_left' || obj.id === 'small_items_cluster_left' || obj.id === 'window_sill_statues' || obj.id === 'tall_figurine_right' || obj.id === 'sill_animal_figures_line') continue;
+  if (obj.type === 'instancedBoxes') {
+    // Instanced mesh for books or figurines
+    const ts = obj.templateSize;
+    const geo = new THREE.BoxGeometry(ts.x, ts.y, ts.z);
+    const mat = makeMat(obj.material);
+    const count = obj.instanceCount;
+    const imesh = new THREE.InstancedMesh(geo, mat, count);
+
+    const sp = obj.startTransform.position;
+    const jitter = obj.layout.jitter;
+    const spacing = obj.layout.spacing;
+    const dummy = new THREE.Object3D();
+    const isBooks = obj.id.includes('books');
+    const color = new THREE.Color();
+
+    for (let i = 0; i < count; i++) {
+      const px = sp.x + i * spacing + (Math.random() - 0.5) * 2 * jitter.position.x;
+      const py = sp.y + (Math.random() - 0.5) * 2 * jitter.position.y;
+      const pz = sp.z + (Math.random() - 0.5) * 2 * jitter.position.z;
+      dummy.position.set(px, py, pz);
+
+      const ry = (obj.startTransform.rotation?.y || 0) + (Math.random() - 0.5) * 2 * jitter.rotationY;
+      dummy.rotation.set(0, ry, 0);
+
+      const s = 1 + (Math.random() - 0.5) * 2 * jitter.scale;
+      dummy.scale.set(s, s, s);
+
+      dummy.updateMatrix();
+      imesh.setMatrixAt(i, dummy.matrix);
+
+      if (isBooks) {
+        color.set(bookColors[i % bookColors.length]);
+      } else {
+        const base = new THREE.Color(obj.material.color || '#3a2f27');
+        color.copy(base).offsetHSL(0, 0, (Math.random() - 0.5) * 0.1);
+      }
+      imesh.setColorAt(i, color);
+    }
+
+    imesh.instanceMatrix.needsUpdate = true;
+    if (imesh.instanceColor) imesh.instanceColor.needsUpdate = true;
+    imesh.castShadow = true;
+    imesh.receiveShadow = true;
+    scene.add(imesh);
+  } else {
+    buildItem(obj);
+  }
+}
+
+// --- Plants ---
+const potMat = new THREE.MeshStandardMaterial({ color: '#8B4513', roughness: 0.9 });
+const potMatDark = new THREE.MeshStandardMaterial({ color: '#5C3310', roughness: 0.85 });
+const potMatWhite = new THREE.MeshStandardMaterial({ color: '#e8e0d4', roughness: 0.9 });
+const soilMat = new THREE.MeshStandardMaterial({ color: '#2E1A0A', roughness: 1.0 });
+const leafColors = ['#2D5A27', '#3A7A32', '#1E4D1A', '#4A8A3F', '#2B6E25', '#1B5E18'];
+
+function addPlant(px, py, pz, potR, potH, plantH, leafCount, potMaterial) {
+  // Pot
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(potR, potR * 0.7, potH, 12), potMaterial);
+  pot.position.set(px, py + potH / 2, pz);
+  pot.castShadow = true; pot.receiveShadow = true;
+  scene.add(pot);
+
+  // Soil top
+  const soil = new THREE.Mesh(new THREE.CylinderGeometry(potR * 0.92, potR * 0.92, 0.01, 12), soilMat);
+  soil.position.set(px, py + potH, pz);
+  scene.add(soil);
+
+  // Stem
+  const stemH = plantH * 0.6;
+  const stem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.008, 0.012, stemH, 6),
+    new THREE.MeshStandardMaterial({ color: '#3E6B35', roughness: 0.8 })
+  );
+  stem.position.set(px, py + potH + stemH / 2, pz);
+  stem.castShadow = true;
+  scene.add(stem);
+
+  // Leaves as clusters of spheres
+  for (let i = 0; i < leafCount; i++) {
+    const lc = leafColors[Math.floor(Math.random() * leafColors.length)];
+    const lr = 0.03 + Math.random() * 0.06;
+    const leafGeo = new THREE.SphereGeometry(lr, 8, 8);
+    const leafMat = new THREE.MeshStandardMaterial({ color: lc, roughness: 0.9 });
+    const leaf = new THREE.Mesh(leafGeo, leafMat);
+    const angle = Math.random() * Math.PI * 2;
+    const spread = Math.random() * 0.08;
+    leaf.position.set(
+      px + Math.cos(angle) * spread,
+      py + potH + stemH * (0.5 + Math.random() * 0.5),
+      pz + Math.sin(angle) * spread
+    );
+    leaf.scale.set(1, 0.6 + Math.random() * 0.5, 1);
+    leaf.castShadow = true;
+    scene.add(leaf);
+  }
+}
+
+function addTallPlant(px, py, pz, potR, potH, trunkH, canopyR) {
+  // Large pot
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(potR, potR * 0.75, potH, 12), potMatDark);
+  pot.position.set(px, py + potH / 2, pz);
+  pot.castShadow = true; pot.receiveShadow = true;
+  scene.add(pot);
+
+  const soil = new THREE.Mesh(new THREE.CylinderGeometry(potR * 0.92, potR * 0.92, 0.015, 12), soilMat);
+  soil.position.set(px, py + potH, pz);
+  scene.add(soil);
+
+  // Trunk
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.015, 0.025, trunkH, 8),
+    new THREE.MeshStandardMaterial({ color: '#5C4033', roughness: 0.85 })
+  );
+  trunk.position.set(px, py + potH + trunkH / 2, pz);
+  trunk.castShadow = true;
+  scene.add(trunk);
+
+  // Canopy - multiple leaf clusters
+  for (let i = 0; i < 18; i++) {
+    const lc = leafColors[Math.floor(Math.random() * leafColors.length)];
+    const lr = canopyR * (0.3 + Math.random() * 0.4);
+    const leafGeo = new THREE.SphereGeometry(lr, 8, 6);
+    const leafMat = new THREE.MeshStandardMaterial({ color: lc, roughness: 0.9 });
+    const leaf = new THREE.Mesh(leafGeo, leafMat);
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.random() * canopyR * 0.5;
+    leaf.position.set(
+      px + Math.cos(angle) * dist,
+      py + potH + trunkH + (Math.random() - 0.3) * canopyR,
+      pz + Math.sin(angle) * dist
+    );
+    leaf.scale.set(1, 0.7, 1);
+    leaf.castShadow = true;
+    scene.add(leaf);
+  }
+}
+
+// Tall plants
+addTallPlant(0.15, 0, 2.0, 0.12, 0.25, 0.9, 0.2);    // left corner tall
+addTallPlant(0.15, 0, 0.4, 0.10, 0.22, 0.75, 0.18);   // left wall near window
+addTallPlant(2.9, 0, 1.8, 0.11, 0.24, 0.85, 0.19);    // right side
+
+// Medium desk/sill plants
+addPlant(0.35, 0.78, 0.20, 0.04, 0.06, 0.15, 8, potMat);        // left desk
+addPlant(1.20, 0.78, 0.18, 0.035, 0.055, 0.12, 6, potMatWhite); // desk center-left
+// (sill plant removed)
+
+// (floor pots removed)
+
+// --- Table Lamp ---
+// Base
+const lampBase = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.06, 0.07, 0.02, 16),
+  new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.3, metalness: 0.7 })
+);
+lampBase.position.set(2.30, 0.79, 0.30);
+lampBase.castShadow = true;
+scene.add(lampBase);
+
+// Stem
+const lampStem = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.01, 0.01, 0.30, 8),
+  new THREE.MeshStandardMaterial({ color: '#2a2a2a', roughness: 0.3, metalness: 0.6 })
+);
+lampStem.position.set(2.30, 0.95, 0.30);
+lampStem.castShadow = true;
+scene.add(lampStem);
+
+// Shade (cone, inverted)
+const lampShade = new THREE.Mesh(
+  new THREE.ConeGeometry(0.10, 0.12, 16, 1, true),
+  new THREE.MeshStandardMaterial({ color: '#e8d8c0', roughness: 0.9, side: THREE.DoubleSide })
+);
+lampShade.position.set(2.30, 1.13, 0.30);
+lampShade.rotation.set(Math.PI, 0, 0);
+lampShade.castShadow = true;
+scene.add(lampShade);
+
+// Lamp bulb glow (point light)
+const lampLight = new THREE.PointLight('#ffe4b5', 0.6, 1.5, 2);
+lampLight.position.set(2.30, 1.08, 0.30);
+lampLight.castShadow = true;
+lampLight.shadow.mapSize.width = 512;
+lampLight.shadow.mapSize.height = 512;
+scene.add(lampLight);
+
+// --- Lighting ---
+for (const l of data.lighting) {
+  if (l.type === 'directionalLight') {
+    const light = new THREE.DirectionalLight(l.color, l.intensity);
+    light.position.set(l.position.x, l.position.y, l.position.z);
+    if (l.target) {
+      light.target.position.set(l.target.x, l.target.y, l.target.z);
+      scene.add(light.target);
+    }
+    if (l.castShadow) {
+      light.castShadow = true;
+      light.shadow.mapSize.width = l.shadow?.mapSize || 2048;
+      light.shadow.mapSize.height = l.shadow?.mapSize || 2048;
+      light.shadow.bias = l.shadow?.bias ?? -0.0002;
+      light.shadow.camera.near = 0.1;
+      light.shadow.camera.far = 10;
+      light.shadow.camera.left = -3;
+      light.shadow.camera.right = 3;
+      light.shadow.camera.top = 3;
+      light.shadow.camera.bottom = -3;
+    }
+    scene.add(light);
+  } else if (l.type === 'ambientLight') {
+    scene.add(new THREE.AmbientLight(l.color, l.intensity));
+  }
+}
+
+// --- Resize ---
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// --- Animate ---
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
